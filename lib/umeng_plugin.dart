@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 
@@ -92,6 +93,9 @@ class UmengPlugin {
   }
   ///获取渠道名
   static Future<String> getChannel() async{
+    if(Platform.isIOS){
+      return Future.value("appstore");
+    }
     String channel = await _channel.invokeMethod("getChannel");
     return Future.value(channel);
   }
