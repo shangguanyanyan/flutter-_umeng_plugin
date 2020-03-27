@@ -14,6 +14,8 @@
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
+    NSString *method = call.method;
+    NSLog(@"method%@",method);
   if ([@"getPlatformVersion" isEqualToString:call.method]) {
     result([@"iOS " stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
   } else if([INIT isEqualToString:call.method]){
@@ -30,9 +32,9 @@
     NSString *channel = call.arguments[CHANNEL];
     NSString *key = call.arguments[KEY];
     BOOL encrypt = call.arguments[ENCRYPT];
-    NSLog(@"islogEnable%d,channel%@,key%@,encrypt%d"
+    NSLog(@"islogEnable:%d,channel:%@,key:%@,encrypt:%d"
       ,isLogEnable,channel,key,encrypt);
-  
+    
     
     [UMConfigure initWithAppkey:key channel:channel];
     [UMConfigure setEncryptEnabled:encrypt];
