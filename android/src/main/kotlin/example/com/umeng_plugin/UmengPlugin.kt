@@ -108,6 +108,7 @@ public class UmengPlugin: FlutterPlugin, MethodCallHandler {
     } else if (results == 1) {
       MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.MANUAL)
     }
+    
     result.success(true)
   }
   // 打开页面时进行统计
@@ -216,16 +217,6 @@ public class UmengPlugin: FlutterPlugin, MethodCallHandler {
 
   }
 
-  fun getChannel(context: Context): String? {
-    try {
-      val pm = context.packageManager
-      val appInfo = pm.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
-      return appInfo.metaData.getString("UMENG_CHANNEL")
-    } catch (ignored: PackageManager.NameNotFoundException) {
-    }
-
-    return ""
-  }
   /**
    * onEventObject()
    *
@@ -240,6 +231,7 @@ public class UmengPlugin: FlutterPlugin, MethodCallHandler {
     call.argument<String>("eventId")?.let {
       Log.d("customEvent", "method:onEventObject,eventid:$it,params:${params}")
       if (params.isEmpty()) {
+        // todo:错误调用
         MobclickAgent.onEventObject(context, it, null)
       } else {
         MobclickAgent.onEventObject(context, it, params)
@@ -275,12 +267,10 @@ public class UmengPlugin: FlutterPlugin, MethodCallHandler {
   }
   private fun getDeviceInfo(call: MethodCall, result: Result){
     var str = "未成功获取"
-    if(call.hasArgument("getDeviceInfo")){
-      call.argument<String>("getDeviceInfo")?.let {
-        val infos = getTestDeviceInfo(context)
-        str = "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"";
-        Log.d("umenginfo", "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"")
-      }
+    call.method?.let {
+      val infos = getTestDeviceInfo(context)
+      str = "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"";
+      Log.d("umenginfo", "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"")
     }
     result.success(str)
   }
