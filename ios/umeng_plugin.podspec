@@ -16,7 +16,7 @@ A new Flutter plugin.
   s.source_files = 'Classes/**/*'
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
-  s.dependency 'UMCAnalytics'
+  s.dependency 'UMCCommon'
   s.dependency 'UMCCommonLog'
   s.platform = :ios, '8.0'
   #加入这一行，解决静态二进制文件传递依赖的错误
