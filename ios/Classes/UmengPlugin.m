@@ -22,7 +22,11 @@
       [self init:call result:result];
   } else if([CUSTOME_EVENT isEqualToString:call.method]){
       [self customeEvent:call result:result];
-  }else {
+  }else if([PROFILE_SIGN_IN isEqualToString:call.method]){
+      [self profileSignIn:call result:result];
+  }else if([PROFILE_SIGN_OFF isEqualToString:call.method]){
+      [self profileSignOff:call result:result];
+  }else{
     //result(FlutterMethodNotImplemented);
   }
 }
@@ -47,8 +51,6 @@
 -(void)customeEvent:(FlutterMethodCall*)call result:(FlutterResult)result{
     
     NSDictionary *param = call.arguments[PARAMS];
-    NSLog(@"直接打印call.arguments%@",call.arguments[PARAMS]);
-    NSLog(@"打印param%@",param);
     NSString *eventId = call.arguments[EVENT_ID];
     
     if(param.count>0){
@@ -56,6 +58,21 @@
     }else{
         [MobClick event:eventId];
     }
+}
+
+-(void)profileSignIn:(FlutterMethodCall*)call result:(FlutterResult) result{
+    NSString *provider = call.arguments[PROVIDER];
+    NSString *puid = call.arguments[PUID];
+    if(provider != NULL){
+        [MobClick profileSignInWithPUID:puid provider:provider];
+    }else{
+        [MobClick profileSignInWithPUID:puid];
+    }
+    
+}
+
+-(void)profileSignOff:(FlutterMethodCall*)call result:(FlutterResult) result{
+    [MobClick profileSignOff];
 }
 
 @end

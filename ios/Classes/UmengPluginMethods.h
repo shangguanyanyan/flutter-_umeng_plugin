@@ -16,6 +16,8 @@
 extern NSString *const INIT;
 extern NSString *const GET_CHANNEL;
 extern NSString *const CUSTOME_EVENT;
+extern NSString *const PROFILE_SIGN_IN;
+extern NSString *const PROFILE_SIGN_OFF;
 
 extern NSString *const LOG_ENABLE;
 extern NSString *const CHANNEL;
@@ -26,5 +28,7 @@ extern NSString *const REPORT_CRASH;
 extern NSString *const MODE;
 extern NSString *const PARAMS;
 extern NSString *const EVENT_ID;
+extern NSString *const PROVIDER;
+extern NSString *const PUID;
 @interface UmengPluginMethods : NSObject
 @end

@@ -57,15 +57,15 @@ class UmengPlugin {
   /// 登陆统计
   /// [id]
   /// [interval]
-  static Future<Null> loginPageView(String id, String channel,
+  static Future<Null> profileSignIn(String id, String channel,
       {int interval, String provider}) async {
-    _channel.invokeMethod(LOGIN_PAGE_VIEW,
+    _channel.invokeMethod(PROFILE_SIGN_IN,
         {ID: id, INTERVAL: interval, PROVIDER: provider});
   }
 
   ///登出统计
-  static Future<Null> logoutPageView() async {
-    _channel.invokeMethod(LOGOUT_PAGE_VIEW);
+  static Future<Null> profileSignOff() async {
+    _channel.invokeMethod(PROFILE_SIGN_OFF);
   }
 
   /// 计数事件统计

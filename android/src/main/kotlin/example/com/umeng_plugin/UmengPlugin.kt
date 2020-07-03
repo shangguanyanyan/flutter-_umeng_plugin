@@ -53,7 +53,7 @@ public class UmengPlugin : FlutterPlugin, MethodCallHandler {
             BEGING_PAGE_VIEW -> beginPageView(call, result)
             END_PAGE_VIEW -> endPageView(call, result)
             PROFILE_SIGNIN -> profileSignIn(call, result)
-            PROFILE_SIGNOFF -> logOutPageView(call, result)
+            PROFILE_SIGNOFF -> profileSignOff(call, result)
             EVENT_COUNT -> eventCounts(call, result)
             SET_CATCH_UNCAUGHT -> setCatchUncaught(call, result)
             REPORT_ERR -> reporteErr(call, result)
@@ -117,14 +117,11 @@ public class UmengPlugin : FlutterPlugin, MethodCallHandler {
     // 登陆统计
     private fun profileSignIn(call: MethodCall, result: Result) {
         MobclickAgent.onProfileSignIn(call.argument(PROVIDER), call.argument(ID))
-        // Session间隔时长,单位是毫秒，默认Session间隔时间是30秒,一般情况下不用修改此值
-        call.argument<Long>(INTERVAL)?.let { MobclickAgent.setSessionContinueMillis(it) }
     }
 
     //登出统计
-    private fun logOutPageView(call: MethodCall, result: Result) {
+    private fun profileSignOff(call: MethodCall, result: Result) {
         MobclickAgent.onProfileSignOff()
-        result.success(null)
     }
 
     /**
