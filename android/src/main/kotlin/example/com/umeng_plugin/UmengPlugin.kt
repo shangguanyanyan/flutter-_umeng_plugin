@@ -16,264 +16,262 @@ import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
 
 /** UmengPlugin */
-public class UmengPlugin: FlutterPlugin, MethodCallHandler {
-  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-    val umengPlugin = UmengPlugin()
-    umengPlugin.context = flutterPluginBinding.applicationContext;
-    Log.d("onAttachedToEngine","${umengPlugin.context}")
-    val channel = MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "umeng_plugin")
-    channel.setMethodCallHandler(umengPlugin)
-    val infos = getTestDeviceInfo(flutterPluginBinding.applicationContext)
-    Log.d("umenginfo", "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"")
-  }
-
-  // This static function is optional and equivalent to onAttachedToEngine. It supports the old
-  // pre-Flutter-1.12 Android projects. You are encouraged to continue supporting
-  // plugin registration via this function while apps migrate to use the new Android APIs
-  // post-flutter-1.12 via https://flutter.dev/go/android-project-migration.
-  //
-  // It is encouraged to share logic between onAttachedToEngine and registerWith to keep
-  // them functionally equivalent. Only one of onAttachedToEngine or registerWith will be called
-  // depending on the user's project. onAttachedToEngine or registerWith must both be defined
-  // in the same class.
-  var context: Context? = null
-  companion object {
-    @JvmStatic
-    fun registerWith(registrar: Registrar) {
-      val umengPlugin = UmengPlugin()
-      umengPlugin.context = registrar.activity()
-      Log.d("context in registerWith","${umengPlugin.context}")
-      val channel = MethodChannel(registrar.messenger(), "umeng_plugin")
-      channel.setMethodCallHandler(umengPlugin)
-      val infos = getTestDeviceInfo(registrar.activity())
-      Log.d("umenginfo", "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"")
+public class UmengPlugin : FlutterPlugin, MethodCallHandler {
+    private var isLogEnable: Boolean = false
+    private var context: Context? = null
+    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        val umengPlugin = UmengPlugin()
+        umengPlugin.context = flutterPluginBinding.applicationContext;
+        val channel = MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), UMENG_PLUGIN)
+        channel.setMethodCallHandler(umengPlugin)
+        val infos = getTestDeviceInfo(flutterPluginBinding.applicationContext)
     }
-  }
 
-  override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
-      Log.d("customEvent", call.method)
-    when (call.method) {
-        "getPlatformVersion" -> result.success("Android ${Build.VERSION.RELEASE}")
-        "init" -> init(call, result)
-        "beginPageView" -> beginPageView(call, result)
-        "endPageView" -> endPageView(call, result)
-        "loginPageView" -> loginPageView(call, result)
-        "logoutPageView" -> logOutPageView(call, result)
-        "eventCounts" -> eventCounts(call, result)
-        "setCatchUncaught" -> setaCatchUncaught(call, result)
-        "reportErr" -> reporteErr(call, result)
-        "customEvent" -> customEvent(call, result)
-        "getChannel" -> getChannel(call, result)
-        "getDeviceInfo" -> getDeviceInfo(call,result)
-        else -> result.notImplemented()
+    // This static function is optional and equivalent to onAttachedToEngine. It supports the old
+    // pre-Flutter-1.12 Android projects. You are encouraged to continue supporting
+    // plugin registration via this function while apps migrate to use the new Android APIs
+    // post-flutter-1.12 via https://flutter.dev/go/android-project-migration.
+    //
+    // It is encouraged to share logic between onAttachedToEngine and registerWith to keep
+    // them functionally equivalent. Only one of onAttachedToEngine or registerWith will be called
+    // depending on the user's project. onAttachedToEngine or registerWith must both be defined
+    // in the same class.
+    companion object {
+        @JvmStatic
+        fun registerWith(registrar: Registrar) {
+            val umengPlugin = UmengPlugin()
+            umengPlugin.context = registrar.activity()
+            val channel = MethodChannel(registrar.messenger(), UMENG_PLUGIN)
+            channel.setMethodCallHandler(umengPlugin)
+        }
     }
-  }
-  private fun init(call: MethodCall, result: Result) {
-    // 设置组件化的Log开关，参数默认为false，如需查看LOG设置为true
-    call.argument<Boolean>("logEnable")?.let { UMConfigure.setLogEnabled(it) }
+
+    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+        when (call.method) {
+            GET_PLATFORM_VERSION -> result.success("Android ${Build.VERSION.RELEASE}")
+            INIT -> init(call, result)
+            BEGING_PAGE_VIEW -> beginPageView(call, result)
+            END_PAGE_VIEW -> endPageView(call, result)
+            PROFILE_SIGNIN -> profileSignIn(call, result)
+            PROFILE_SIGNOFF -> logOutPageView(call, result)
+            EVENT_COUNT -> eventCounts(call, result)
+            SET_CATCH_UNCAUGHT -> setCatchUncaught(call, result)
+            REPORT_ERR -> reporteErr(call, result)
+            CUSTOM_EVENT -> customEvent(call, result)
+            GET_CHANNEL -> getChannel(call, result)
+            GET_DEVICE_INFO -> getDeviceInfo(call, result)
+            else -> result.notImplemented()
+        }
+    }
+
+    private fun init(call: MethodCall, result: Result) {
+        /**
+         * 初始化common库 参数1：上下文，不能为空 参数2：【友盟+】Appkey名称 参数3：【友盟+】Channel名称
+         * 参数4：设备类型，UMConfigure.DEVICE_TYPE_PHONE为手机、UMConfigure.DEVICE_TYPE_BOX为盒子，默认为手机
+         * 参数5：Push推送业务的secret
+         */
+        UMConfigure.init(context, call.argument<Any>(KEY) as String?, call.argument<Any>(CHANNEL) as String?, UMConfigure.DEVICE_TYPE_PHONE, null)
+        call.argument<Double>(INTERVAL).let {
+            if (it == null) MobclickAgent.setSessionContinueMillis(30000L) else MobclickAgent.setSessionContinueMillis(java.lang.Double.valueOf(it).toLong())
+        }
+
+        // 设置组件化的Log开关，参数默认为false，如需查看LOG设置为true
+        call.argument<Boolean>(LOG_ENABLE)?.let {
+            isLogEnable = it
+            UMConfigure.setLogEnabled(it)
+        }
+        // 设置日志加密 参数：boolean 默认为false（不加密）
+        call.argument<Boolean>(ENCRYPT)?.let {
+            UMConfigure.setEncryptEnabled(it)
+        }
+        call.argument<Boolean>(REPORT_CRASH)?.let {
+            MobclickAgent.setCatchUncaughtExceptions(it)
+        }
+
+        // 页面采集的两种模式：AUTO和MANUAL，Android 4.0及以上版本使用AUTO,4.0以下使用MANUAL
+        call.argument<Int>(MODE).let {
+            val isLegacy = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
+            if (it == 0) {
+                MobclickAgent.setPageCollectionMode(if (isLegacy) MobclickAgent.PageMode.AUTO else MobclickAgent.PageMode.LEGACY_AUTO)
+            } else {
+                MobclickAgent.setPageCollectionMode(if (isLegacy) MobclickAgent.PageMode.MANUAL else MobclickAgent.PageMode.LEGACY_MANUAL)
+            }
+        }
+        result.success(true)
+    }
+
+    // 打开页面时进行统计
+    private fun beginPageView(call: MethodCall, result: Result) {
+        MobclickAgent.onPageStart(call.argument<Any>(NAME) as String?)
+        MobclickAgent.onResume(context)
+        result.success(null)
+    }
+
+    // 关闭页面时结束统计
+    private fun endPageView(call: MethodCall, result: Result) {
+        MobclickAgent.onPageEnd(call.argument<Any>(NAME) as String?)
+        MobclickAgent.onPause(context)
+        result.success(null)
+    }
+
+    // 登陆统计
+    private fun profileSignIn(call: MethodCall, result: Result) {
+        MobclickAgent.onProfileSignIn(call.argument(PROVIDER), call.argument(ID))
+        // Session间隔时长,单位是毫秒，默认Session间隔时间是30秒,一般情况下不用修改此值
+        call.argument<Long>(INTERVAL)?.let { MobclickAgent.setSessionContinueMillis(it) }
+    }
+
+    //登出统计
+    private fun logOutPageView(call: MethodCall, result: Result) {
+        MobclickAgent.onProfileSignOff()
+        result.success(null)
+    }
+
     /**
-     * 初始化common库 参数1：上下文，不能为空 参数2：【友盟+】Appkey名称 参数3：【友盟+】Channel名称
-     * 参数4：设备类型，UMConfigure.DEVICE_TYPE_PHONE为手机、UMConfigure.DEVICE_TYPE_BOX为盒子，默认为手机
-     * 参数5：Push推送业务的secret
+     * 计数事件统计 例如：统计微博应用中”转发”事件发生的次数，那么在转发的函数里调用该函数
+     *
+     * @param call
+     * @param result
      */
-    Log.d("customEvent","channel : ${call.argument<Any>("channel") as String?}")
-    Log.d("context in init","${context}")
-    UMConfigure.init(context, call.argument<Any>("key") as String?, call.argument<Any>("channel") as String?, UMConfigure.DEVICE_TYPE_PHONE, null)
-    // 设置日志加密 参数：boolean 默认为false（不加密）
-
-    UMConfigure.setEncryptEnabled((call.argument<Any>("encrypt") as Boolean?)!!)
-
-    val interval = call.argument<Double>("interval")!!
-    if (call.argument<Any>("interval") != null) {
-      // Session间隔时长,单位是毫秒，默认Session间隔时间是30秒,一般情况下不用修改此值
-      MobclickAgent.setSessionContinueMillis(java.lang.Double.valueOf(interval).toLong())
-    } else {
-      // Session间隔时长,单位是毫秒，默认Session间隔时间是30秒,一般情况下不用修改此值
-      MobclickAgent.setSessionContinueMillis(30000L)
+    private fun eventCounts(call: MethodCall, result: Result) {
+        /**
+         * 参数1： context 当前宿主进程的ApplicationContext上下文 参数2： eventId 为当前统计的事件ID 参数3： label
+         * 为事件的标签属性
+         */
+        MobclickAgent.onEvent(context, call.argument(EVENT_ID), call.argument<String>(LABEL))
+        result.success(null)
     }
 
-
-    // true表示打开错误统计功能，false表示关闭 默认为打开
-    MobclickAgent.setCatchUncaughtExceptions((call.argument<Any>("reportCrash") as Boolean?)!!)
-
-    // 页面采集的两种模式：AUTO和MANUAL，Android 4.0及以上版本使用AUTO,4.0以下使用MANUAL
-    val results = call.argument<Int>("mode")!!
-    if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-      if (results == 0) {
-        // 大于等于4.4选用AUTO页面采集模式
-        MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.AUTO)
-      }else{
-        MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.MANUAL)
-      }
-    } else if (results == 1) {
-      MobclickAgent.setPageCollectionMode(MobclickAgent.PageMode.MANUAL)
-    }
-    
-    result.success(true)
-  }
-  // 打开页面时进行统计
-  private fun beginPageView(call: MethodCall, result: Result) {
-    MobclickAgent.onPageStart(call.argument<Any>("name") as String?)
-    MobclickAgent.onResume(context)
-    result.success(null)
-  }
-
-  // 关闭页面时结束统计
-  private fun endPageView(call: MethodCall, result: Result) {
-    MobclickAgent.onPageEnd(call.argument<Any>("name") as String?)
-    MobclickAgent.onPause(context)
-    result.success(null)
-  }
-
-  // 登陆统计
-  private fun loginPageView(call: MethodCall, result: Result) {
-    MobclickAgent.onProfileSignIn(call.argument<String>("privider"), call.argument<Any>("id") as String?)
-    // Session间隔时长,单位是毫秒，默认Session间隔时间是30秒,一般情况下不用修改此值
-    (call.argument<Any>("interval"))?.let { MobclickAgent.setSessionContinueMillis(it as Long) }
-    //MobclickAgent.setSessionContinueMillis((call.argument<Any>("interval") as Long?)!!)
-  }
-
-  //登出统计
-  private fun logOutPageView(call: MethodCall, result: Result) {
-    MobclickAgent.onProfileSignOff()
-    result.success(null)
-  }
-  /**
-   * 计数事件统计 例如：统计微博应用中”转发”事件发生的次数，那么在转发的函数里调用该函数
-   *
-   * @param call
-   * @param result
-   */
-  private fun eventCounts(call: MethodCall, result: Result) {
     /**
-     * 参数1： context 当前宿主进程的ApplicationContext上下文 参数2： eventId 为当前统计的事件ID 参数3： label
-     * 为事件的标签属性
+     * 是否开启错误统计功能
      */
-    MobclickAgent.onEvent(context, call.argument<Any>("eventId") as String?, call.argument<Any>("label") as String?)
-    result.success(null)
-  }
-
-  /**
-   * 是否开启错误统计功能
-   */
-  private fun setaCatchUncaught(call: MethodCall, result: Result) {
-    call.argument<Boolean>("catchExceptionIsEnable")?.let {
-      MobclickAgent.setCatchUncaughtExceptions(it)
-    }
-  }
-  /**
-   * 上报错误，有两种方式：1、错误内容字符串，2、错误内容异常对象
-   */
-  private fun reporteErr(call: MethodCall, result: Result) {
-    var isThrowable = false
-    call.argument<Boolean>("isThrowable")?.let {
-      isThrowable = it
-    }
-    if (isThrowable) {
-      call.argument<Throwable>("throwable")?.let {
-        MobclickAgent.reportError(context, it)
-      }
-    } else {
-      call.argument<String>("errString")?.let {
-        MobclickAgent.reportError(context, it)
-      }
-    }
-  }
-
-  /**
-   * 自定义事件上传
-   */
-  private fun customEvent(call: MethodCall, result: Result) {
-    val params = mutableMapOf<String, Any>()
-    call.argument<Map<String, Any>>("params")?.let {
-      params.putAll(it)
-    }
-    call.argument<String>("eventId")?.let {
-      if (params.isEmpty()) {
-        Log.d("customEvent", "method:onEvent,eventid:$it,params:${params}")
-        MobclickAgent.onEvent(context, it)
-      } else {
-        Log.d("customEvent", "method:onEventObject,eventid:$it,params:${params}")
-        MobclickAgent.onEventObject(context, it, params)
-      }
-    }
-  }
-  /**
-   * 获取渠道名
-   */
-  private fun getChannel(call: MethodCall, result: Result) {
-    var channel = ""
-    try {
-      val pm = context?.packageManager
-      val appInfo = pm?.getApplicationInfo(context?.packageName, PackageManager.GET_META_DATA)
-      appInfo?.metaData?.getString("UMENG_CHANNEL")?.let {
-        channel = it
-        Log.d("customEvent","channel:$channel")
-      }
-      result.success(channel)
-    } catch (ignored: PackageManager.NameNotFoundException) {
-      result.error("getChannel", "${ignored.message}", "${ignored.cause}")
+    private fun setCatchUncaught(call: MethodCall, result: Result) {
+        call.argument<Boolean>(CATCH_EXCEPTION_IS_ENABLE)?.let {
+            MobclickAgent.setCatchUncaughtExceptions(it)
+        }
     }
 
-  }
-
-  /**
-   * onEventObject()
-   *
-   */
-  private fun onEventObject(call: MethodCall, result: Result) {
-    val params = mutableMapOf<String, Any>()
-    if (call.hasArgument("params")) {
-      call.argument<Map<String, Any>>("params")?.let {
-        params.putAll(it)
-      }
-    }
-    call.argument<String>("eventId")?.let {
-      Log.d("customEvent", "method:onEventObject,eventid:$it,params:${params}")
-      if (params.isEmpty()) {
-        // todo:错误调用
-        MobclickAgent.onEventObject(context, it, null)
-      } else {
-        MobclickAgent.onEventObject(context, it, params)
-      }
-    }
-  }
-
-  /**
-   * onEvent()
-   */
-  private fun onEvent(call: MethodCall, result: Result) {
-    var label = ""
-    if (call.hasArgument("label")) {
-      call.argument<String>("label")?.let {
-        label = it
-      }
-    }
-    call.argument<String>("eventId")?.let {
-      Log.d("customEvent", "method:onEvent,eventId$it,label:$label")
-      if (label != "") {
-        MobclickAgent.onEvent(context, it)
-      } else {
-        MobclickAgent.onEvent(context, it, label)
-      }
+    /**
+     * 上报错误，有两种方式：1、错误内容字符串，2、错误内容异常对象
+     */
+    private fun reporteErr(call: MethodCall, result: Result) {
+        var isThrowable = false
+        call.argument<Boolean>(IS_THROWABLE)?.let {
+            isThrowable = it
+        }
+        if (isThrowable) {
+            call.argument<Throwable>(THROWABLE)?.let {
+                MobclickAgent.reportError(context, it)
+            }
+        } else {
+            call.argument<String>(ERR_STRING)?.let {
+                MobclickAgent.reportError(context, it)
+            }
+        }
     }
 
-  }
-  /**
-   * onEventValue()
-   */
-  private fun onEventValue(call: MethodCall, result: Result) {
-
-  }
-  private fun getDeviceInfo(call: MethodCall, result: Result){
-    var str = "未成功获取"
-    call.method?.let {
-      val infos = getTestDeviceInfo(context)
-      str = "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"";
-      Log.d("umenginfo", "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\"")
+    /**
+     * 自定义事件上传
+     */
+    private fun customEvent(call: MethodCall, result: Result) {
+        val params = mutableMapOf<String, Any>()
+        call.argument<Map<String, Any>>(PARAMS)?.let {
+            params.putAll(it)
+        }
+        call.argument<String>(EVENT_ID)?.let {
+            if (params.isEmpty()) {
+                log("method:onEvent,eventid:$it,params:${params}")
+                MobclickAgent.onEvent(context, it)
+            } else {
+                log("method:onEventObject,eventid:$it,params:${params}")
+                MobclickAgent.onEventObject(context, it, params)
+            }
+        }
     }
-    result.success(str)
-  }
-  override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
-  }
+
+    /**
+     * 获取渠道名
+     */
+    private fun getChannel(call: MethodCall, result: Result) {
+        var channel = ""
+        try {
+            val pm = context?.packageManager
+            val appInfo = pm?.getApplicationInfo(context?.packageName, PackageManager.GET_META_DATA)
+            appInfo?.metaData?.getString(UMENG_CHANNEL)?.let {
+                channel = it
+                log("channel:$channel")
+            }
+            result.success(channel)
+        } catch (ignored: PackageManager.NameNotFoundException) {
+            result.error(GET_CHANNEL, "${ignored.message}", "${ignored.cause}")
+        }
+
+    }
+
+    /**
+     * onEventObject()
+     *
+     */
+    private fun onEventObject(call: MethodCall, result: Result) {
+        val params = mutableMapOf<String, Any>()
+        if (call.hasArgument(PARAMS)) {
+            call.argument<Map<String, Any>>(PARAMS)?.let {
+                params.putAll(it)
+            }
+        }
+        call.argument<String>(EVENT_ID)?.let {
+            log("method:onEventObject,eventid:$it,params:${params}")
+            if (params.isEmpty()) {
+                // todo:错误调用
+                MobclickAgent.onEventObject(context, it, null)
+            } else {
+                MobclickAgent.onEventObject(context, it, params)
+            }
+        }
+    }
+
+    /**
+     * onEvent()
+     */
+    private fun onEvent(call: MethodCall, result: Result) {
+        var label = ""
+        if (call.hasArgument(LABEL)) {
+            call.argument<String>(LABEL)?.let {
+                label = it
+            }
+        }
+        call.argument<String>(EVENT_ID)?.let {
+            log("method:onEvent,eventId$it,label:$label")
+            if (label != "") {
+                MobclickAgent.onEvent(context, it)
+            } else {
+                MobclickAgent.onEvent(context, it, label)
+            }
+        }
+
+    }
+
+    /**
+     * onEventValue()
+     */
+    private fun onEventValue(call: MethodCall, result: Result) {
+
+    }
+
+    private fun getDeviceInfo(call: MethodCall, result: Result) {
+        var str = "未成功获取"
+        call.method?.let {
+            val infos = getTestDeviceInfo(context)
+            str = "{\"device_id\":\"${infos[0]}\",\"mac\":\"${infos[1]}}\""
+            log(str)
+        }
+        result.success(str)
+    }
+
+    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    }
+
+    private fun log(message: String) {
+        if (isLogEnable) Log.d("umengPlugin", message)
+    }
 }
